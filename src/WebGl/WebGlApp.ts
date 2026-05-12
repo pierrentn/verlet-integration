@@ -7,12 +7,14 @@ import {
   PerspectiveCamera,
   Scene,
   SphereGeometry,
+  Vector2,
   Vector3,
   WebGPURenderer,
 } from 'three/webgpu';
 import { Clock, Viewport } from './core';
 
 const V3 = new Vector3();
+const V3B = new Vector3();
 
 const FOV = 75;
 const NEAR = 0.1;
@@ -21,6 +23,8 @@ const FAR = 1000;
 const GRAVITY = 0.001;
 const FRICTION = 0.999;
 const BOUNCE = 0.9;
+
+const POINT_SIZE = 0.03;
 
 let _instance: WebGlApp | null = null;
 
@@ -89,55 +93,132 @@ export class WebGlApp {
 
     this.scene = new Scene();
 
-    // this.pPoint.push({
-    //   pos: new Vector3(0, 0, 0),
-    //   prevPos: new Vector3(-0.05, -0.05, 0),
-    // });
-    // this.pPoint.push({
-    //   pos: new Vector3(0, 1, 0),
-    //   prevPos: new Vector3(0, 1, 0),
-    // });
-    // this.pPoint.push({
-    //   pos: new Vector3(1, 1, 0),
-    //   prevPos: new Vector3(1, 1, 0),
-    // });
-    // this.pPoint.push({
-    //   pos: new Vector3(1, 0, 0),
-    //   prevPos: new Vector3(1, 0, 0),
-    // });
-    // this.pLink.push({
-    //   p0: this.pPoint[0],
-    //   p1: this.pPoint[1],
-    //   length: this.pPoint[0].pos.distanceTo(this.pPoint[1].pos),
-    // });
-    // this.pLink.push({
-    //   p0: this.pPoint[1],
-    //   p1: this.pPoint[2],
-    //   length: this.pPoint[1].pos.distanceTo(this.pPoint[2].pos),
-    // });
-    // this.pLink.push({
-    //   p0: this.pPoint[2],
-    //   p1: this.pPoint[3],
-    //   length: this.pPoint[2].pos.distanceTo(this.pPoint[3].pos),
-    // });
-    // this.pLink.push({
-    //   p0: this.pPoint[3],
-    //   p1: this.pPoint[0],
-    //   length: this.pPoint[3].pos.distanceTo(this.pPoint[0].pos),
-    // });
-    // this.pLink.push({
-    //   p0: this.pPoint[1],
-    //   p1: this.pPoint[3],
-    //   length: this.pPoint[1].pos.distanceTo(this.pPoint[3].pos),
-    // });
+    // this.setBox();
+    // this.setPendulum();
+    this.setGrid();
 
-    const pendulumNbPoints = 20;
+    this.createVisibleObjects();
+
+    this.renderer.setAnimationLoop(this.tick);
+    this.start();
+  }
+
+  //   [
+  //     [],
+  //     [],
+  //     [],
+  //     [],
+  //   ]
+
+  private setGrid(): void {
+    const gridSchema = new Vector2(4, 4);
+    const gridCenter = new Vector2(0, 0);
+    const gridSpacing = new Vector2(0.5, 0.5);
+    let pIndex = 0;
+    const grid = [];
+
+    for (let row = 0; row <= gridSchema.x; row++) {
+      const ttSizeY = gridSpacing.y * gridSchema.y;
+      const y = ttSizeY - gridSpacing.y * row - ttSizeY / 2;
+
+      for (let col = 0; col <= gridSchema.y; col++) {
+        const ttSizeX = gridSpacing.x * gridSchema.x;
+        let x = gridSpacing.x * col - ttSizeX / 2;
+
+        const newPoint: PPoint = {
+          frozen: (pIndex === 0 || pIndex === gridSchema.x) && row === 0,
+          pos: new Vector3(x, y, 0),
+          prevPos: new Vector3(x, y, 0),
+        };
+        this.pPoint.push(newPoint);
+        if (pIndex > 0) {
+          console.log(col + row);
+          const p0Idx = pIndex - 1;
+          const p1Index = pIndex;
+          if (col > 0) {
+            const newLink: PLink = {
+              p0: this.pPoint[p0Idx],
+              p1: this.pPoint[p1Index],
+              length: this.pPoint[p0Idx].pos.distanceTo(
+                this.pPoint[p1Index].pos
+              ),
+            };
+            this.pLink.push(newLink);
+          }
+
+          if (row > 0) {
+            this.pLink.push({
+              p0: this.pPoint[p0Idx - gridSchema.x],
+              p1: this.pPoint[p1Index],
+              length: this.pPoint[p0Idx - gridSchema.x].pos.distanceTo(
+                this.pPoint[p1Index].pos
+              ),
+            });
+          }
+        }
+        pIndex++;
+      }
+    }
+  }
+
+  private setBox(): void {
+    this.pPoint.push({
+      pos: new Vector3(0, 0, 0),
+      prevPos: new Vector3(-0.05, -0.05, 0),
+      frozen: false,
+    });
+    this.pPoint.push({
+      pos: new Vector3(0, 1, 0),
+      prevPos: new Vector3(0, 1, 0),
+      frozen: false,
+    });
+    this.pPoint.push({
+      pos: new Vector3(1, 1, 0),
+      prevPos: new Vector3(1, 1, 0),
+      frozen: false,
+    });
+    this.pPoint.push({
+      pos: new Vector3(1, 0, 0),
+      prevPos: new Vector3(1, 0, 0),
+      frozen: false,
+    });
+    this.pLink.push({
+      p0: this.pPoint[0],
+      p1: this.pPoint[1],
+      length: this.pPoint[0].pos.distanceTo(this.pPoint[1].pos),
+    });
+    this.pLink.push({
+      p0: this.pPoint[1],
+      p1: this.pPoint[2],
+      length: this.pPoint[1].pos.distanceTo(this.pPoint[2].pos),
+    });
+    this.pLink.push({
+      p0: this.pPoint[2],
+      p1: this.pPoint[3],
+      length: this.pPoint[2].pos.distanceTo(this.pPoint[3].pos),
+    });
+    this.pLink.push({
+      p0: this.pPoint[3],
+      p1: this.pPoint[0],
+      length: this.pPoint[3].pos.distanceTo(this.pPoint[0].pos),
+    });
+    this.pLink.push({
+      p0: this.pPoint[1],
+      p1: this.pPoint[3],
+      length: this.pPoint[1].pos.distanceTo(this.pPoint[3].pos),
+    });
+  }
+
+  private setPendulum(): void {
+    const pendulumNbPoints = 40;
     const offsetX = 0.1;
     const offsetY = 0.1;
+    const offsetZ = 0.1;
+    const baseY = 3;
     for (let i = 0; i < pendulumNbPoints; i++) {
       const newP = {
-        pos: new Vector3(0 - offsetX * i, 0 - offsetY * i, 0),
-        prevPos: new Vector3(0 - offsetX * i, 0 - offsetY * i, 0),
+        pos: new Vector3(0 - offsetX * i, baseY - offsetY * i, offsetZ * i),
+        prevPos: new Vector3(0 - offsetX * i, baseY - offsetY * i, offsetZ * i),
         frozen: i === 0,
       };
       this.pPoint.push(newP);
@@ -153,10 +234,12 @@ export class WebGlApp {
         this.pLink.push(nLink);
       }
     }
+  }
 
+  private createVisibleObjects(): void {
     for (let i = 0; i < this.pPoint.length; i++) {
       const m = new Mesh(
-        new SphereGeometry(0.05, 5, 5),
+        new SphereGeometry(POINT_SIZE, 5, 5),
         new MeshBasicNodeMaterial({ color: 'red', wireframe: true })
       );
       this.points.push(m);
@@ -176,9 +259,6 @@ export class WebGlApp {
       this.links.push(link);
       this.scene.add(link);
     }
-
-    this.renderer.setAnimationLoop(this.tick);
-    this.start();
   }
 
   private start(): void {
@@ -225,8 +305,8 @@ export class WebGlApp {
     for (let i = 0; i < this.pLink.length; i++) {
       const { p0, p1, length } = this.pLink[i];
       const delta = V3.copy(p1.pos).sub(p0.pos);
-      const dir = delta.length();
-      const difference = dir - length;
+      const dist = delta.length();
+      const difference = dist - length;
 
       const offset = V3.copy(delta)
         .normalize()
@@ -234,6 +314,34 @@ export class WebGlApp {
 
       if (!p0.frozen) p0.pos.add(offset);
       if (!p1.frozen) p1.pos.sub(offset);
+    }
+  }
+
+  private applyCollision(): void {
+    for (let i = 0; i < this.pPoint.length; i++) {
+      const p = this.pPoint[i];
+      for (let j = i + 1; j < this.pPoint.length; j++) {
+        const pTest = this.pPoint[j];
+        const delta = V3.copy(p.pos).sub(pTest.pos);
+        const dist = delta.length();
+
+        if (dist > 0 && dist < POINT_SIZE * 2) {
+          const dir = V3.copy(delta).normalize();
+          const difference = POINT_SIZE * 2 - dist;
+
+          if (!p.frozen && !pTest.frozen) {
+            const offset = V3B.copy(dir).multiplyScalar(difference * 0.5);
+            p.pos.add(offset);
+            pTest.pos.sub(offset);
+          } else if (!p.frozen) {
+            const offset = V3B.copy(dir).multiplyScalar(difference);
+            p.pos.add(offset);
+          } else if (!pTest.frozen) {
+            const offset = V3B.copy(dir).multiplyScalar(difference);
+            pTest.pos.sub(offset);
+          }
+        }
+      }
     }
   }
 
@@ -291,7 +399,10 @@ export class WebGlApp {
     this.viewport.update();
     this.updatePhysicsPoints();
     this.updatePhysicsLinks();
-    this.applyConstraint();
+    for (let i = 0; i < 4; i++) {
+      this.applyCollision();
+    }
+    // this.applyConstraint();
     this.updatePointsPosition();
     this.updateLinksPosition();
   };
