@@ -4,9 +4,15 @@
   padding: 0;
 }
 
+body {
+  width: 100vw;
+  height: 100vh;
+}
+
 .webgl-canvas {
   position: fixed;
   inset: 0;
   width: 100vw;
   height: 100vh;
+  outline: 1px solid red;
 }

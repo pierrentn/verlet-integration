@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      stats-gl:
+        specifier: ^4.1.0
+        version: 4.1.0(three@0.184.0)
       three:
         specifier: ^0.184.0
         version: 0.184.0
@@ -274,6 +277,14 @@ packages:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
 
+  stats-gl@4.1.0:
+    resolution: {integrity: sha512-A0aw+njfFtowIJ5tCbCxKBRR7oflVmGEjdXfMI7IAc/fDTdms4eIKSaLDWL222XCrfQdT49VE19JgKGDQmz0yw==}
+    peerDependencies:
+      three: '*'
+    peerDependenciesMeta:
+      three:
+        optional: true
+
   three@0.184.0:
     resolution: {integrity: sha512-wtTRjG92pM5eUg/KuUnHsqSAlPM296brTOcLgMRqEeylYTh/CdtvKUvCyyCQTzFuStieWxvZb8mVTMvdPyUpxg==}
 
@@ -531,6 +542,10 @@ snapshots:
       '@rolldown/binding-win32-x64-msvc': 1.0.0
 
   source-map-js@1.2.1: {}
+
+  stats-gl@4.1.0(three@0.184.0):
+    optionalDependencies:
+      three: 0.184.0
 
   three@0.184.0: {}
 
