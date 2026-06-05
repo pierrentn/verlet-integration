@@ -22,7 +22,7 @@ export class Link {
   public p0: Point;
   public p1: Point;
   public length: number;
-  private strainTear = 2;
+  private strainTear = 4;
 
   constructor({ app, physic }: LinkParameters) {
     this.app = app;
