@@ -1,6 +1,7 @@
-import { BufferGeometry, InstancedMesh, Object3D } from 'three';
+import { BufferGeometry, InstancedMesh } from 'three';
 import {
   Color,
+  DynamicDrawUsage,
   InstancedBufferAttribute,
   Matrix4,
   type MeshBasicNodeMaterial,
@@ -9,7 +10,7 @@ import type { Point } from './Point';
 
 const TMP_MATRIX = new Matrix4();
 
-const BASE_COLOR = new Color(0xff0000);
+const BASE_COLOR = new Color(0xdddddd);
 
 export interface PointHelpersParameters {
   geometry: BufferGeometry;
@@ -39,12 +40,21 @@ export class PointHelpers extends InstancedMesh {
     }
 
     this.instanceColor = new InstancedBufferAttribute(this.colorBuffer, 3);
+    this.instanceColor.setUsage(DynamicDrawUsage);
     this.instanceColor.needsUpdate = true;
   }
 
   setTransformation(index: number) {
     const point = this.points[index];
 
+    if (point.isDead) {
+      TMP_MATRIX.makeScale(0, 0, 0);
+      super.setMatrixAt(index, TMP_MATRIX);
+      this.instanceMatrix.needsUpdate = true;
+      return;
+    }
+
+    TMP_MATRIX.identity();
     TMP_MATRIX.setPosition(point.position);
     super.setMatrixAt(index, TMP_MATRIX);
     this.instanceMatrix.needsUpdate = true;
@@ -52,13 +62,18 @@ export class PointHelpers extends InstancedMesh {
 
   update() {
     for (let i = this.points.length - 1; i >= 0; i--) {
-      if (this.points[i].isDead) {
-        this.points.splice(i, 1);
-        this.count = this.points.length;
-        this.instanceMatrix.needsUpdate = true;
-        continue;
-      }
+      // const pointVelX =
+      //   this.points[i].position.x - this.points[i].prevPosition.x;
+      // const pointVelY =
+      //   this.points[i].position.y - this.points[i].prevPosition.y;
+      // const pointVel = Math.sqrt(pointVelX * pointVelX + pointVelY * pointVelY);
+      // this.colorBuffer[i * 3] = 0;
+      // this.colorBuffer[i * 3 + 1] = (pointVel * 100 * (pointVel * 100)) / 5;
+      // this.colorBuffer[i * 3 + 2] = 0;
+
       this.setTransformation(i);
     }
+    this.instanceMatrix.needsUpdate = true;
+    this.instanceColor!.needsUpdate = true;
   }
 }

@@ -9,7 +9,6 @@ interface PointerParameters {
 
 export class Pointer {
   private viewport: Viewport;
-  private clock: Clock;
 
   public pointer = new Vector2();
   public ndcPointer = new Vector2();
@@ -18,9 +17,8 @@ export class Pointer {
 
   public isDown = false;
 
-  constructor({ viewport, clock }: PointerParameters) {
+  constructor({ viewport }: PointerParameters) {
     this.viewport = viewport;
-    this.clock = clock;
   }
 
   public start() {
@@ -64,7 +62,7 @@ export class Pointer {
     window.removeEventListener('pointerup', this.onPointerUp);
   }
 
-  public update() {
+  public reset() {
     this.velocity.set(0, 0);
     this.ndcVelocity.set(0, 0);
   }

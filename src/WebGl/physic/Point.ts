@@ -1,7 +1,8 @@
-import { Sphere, Vector3 } from 'three';
-import type { WebGlApp, WorldBounds } from '../WebGlApp';
+import { Vector3 } from 'three';
+import type { PhysicsParams, WebGlApp } from '../WebGlApp';
 import { clamp } from '../../utils/maths';
 import type { Link } from './Link';
+import { isXYInsideCircle } from '../../utils/distance';
 
 const V3 = new Vector3();
 
@@ -22,9 +23,7 @@ export class Point {
   public prevPosition: Vector3;
   public isPinned: boolean;
 
-  public mass = 5;
-  private elasticity = 0.005;
-  private bounce = 0.9;
+  public bounce = 0.9;
   public isDead = false;
 
   public connectedLinks: Link[] = [];
@@ -54,12 +53,9 @@ export class Point {
     return this;
   }
 
-  public updatePhysic(
-    simulationParams: { force: number; gravity: number; friction: number },
-    dt: number
-  ) {
-    const { force, gravity, friction } = simulationParams;
-    const { position, prevPosition, isPinned, mass } = this;
+  public updatePhysic(physicsParams: PhysicsParams, dt: number) {
+    const { force, gravity, friction, mass, elasticity } = physicsParams;
+    const { position, prevPosition, isPinned } = this;
     if (isPinned || this.isDead) return;
     const acceleration = V3.set(
       force / mass,
@@ -69,55 +65,55 @@ export class Point {
 
     const sqDt = dt * dt;
 
-    let newX, newY, newZ;
+    const isInsideCursor = isXYInsideCircle(
+      position,
+      this.app.cursorSphere.center,
+      this.app.cursorSphere.radius
+    );
+
+    let newX = 0,
+      newY = 0,
+      newZ = 0;
     if (
-      this.app.cursorSphere &&
-      this.app.cursorSphere.containsPoint(position) &&
-      this.app.worldBounds
+      isInsideCursor
       // &&
       // this.pointer.isDown
     ) {
       const dragX = clamp(
-        this.app.pointer.ndcVelocity.x * this.app.worldBounds.maxX,
-        -this.elasticity,
-        this.elasticity
+        this.app.cursorSphereVelocity.x,
+        -elasticity,
+        elasticity
       );
       const dragY = clamp(
-        this.app.pointer.ndcVelocity.y * this.app.worldBounds.maxY,
-        -this.elasticity,
-        this.elasticity
-      );
-
-      const dragZ = clamp(
-        this.app.pointer.ndcVelocity.length() * this.app.worldBounds.maxY,
-        -this.elasticity,
-        this.elasticity
+        this.app.cursorSphereVelocity.y,
+        -elasticity,
+        elasticity
       );
 
       newX =
         position.x +
-        ((position.x - prevPosition.x) * friction + dragX) +
+        ((position.x - prevPosition.x) * (1 - friction) + dragX) +
         acceleration.x * sqDt;
       newY =
         position.y +
-        ((position.y - prevPosition.y) * friction + dragY) +
+        ((position.y - prevPosition.y) * (1 - friction) + dragY) +
         acceleration.y * sqDt;
       newZ =
         position.z +
-        ((position.z - prevPosition.z) * friction + dragZ) +
+        (position.z - prevPosition.z) * (1 - friction) +
         acceleration.z * sqDt;
     } else {
       newX =
         position.x +
-        (position.x - prevPosition.x) * friction +
+        (position.x - prevPosition.x) * (1 - friction) +
         acceleration.x * sqDt;
       newY =
         position.y +
-        (position.y - prevPosition.y) * friction +
+        (position.y - prevPosition.y) * (1 - friction) +
         acceleration.y * sqDt;
       newZ =
         position.z +
-        (position.z - prevPosition.z) * friction +
+        (position.z - prevPosition.z) * (1 - friction) +
         acceleration.z * sqDt;
     }
 
@@ -125,16 +121,12 @@ export class Point {
     position.set(newX, newY, newZ);
   }
 
-  public applyConstraints(simulationParams: {
-    force: number;
-    gravity: number;
-    friction: number;
-  }) {
-    const { friction } = simulationParams;
+  public applyConstraints(physicsParams: PhysicsParams) {
+    const { friction } = physicsParams;
     if (this.app.worldBounds && !this.isDead) {
       const { position, prevPosition } = this;
-      const velX = (position.x - prevPosition.x) * friction;
-      const velY = (position.y - prevPosition.y) * friction;
+      const velX = (position.x - prevPosition.x) * (1 - friction);
+      const velY = (position.y - prevPosition.y) * (1 - friction);
       // const velZ = (position.z - prevPosition.x) * FRICTION;
 
       const { minX, maxX, minY, maxY } = this.app.worldBounds;

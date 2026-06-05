@@ -1,6 +1,7 @@
-import { Sphere, Vector3 } from 'three';
-import type { WebGlApp, WorldBounds } from '../WebGlApp';
+import { Vector3 } from 'three';
+import type { WebGlApp } from '../WebGlApp';
 import type { Point } from './Point';
+import { isXYInsideCircle } from '../../utils/distance';
 
 const V3 = new Vector3();
 
@@ -21,7 +22,7 @@ export class Link {
   public p0: Point;
   public p1: Point;
   public length: number;
-  private tear = 10;
+  private strainTear = 2;
 
   constructor({ app, physic }: LinkParameters) {
     this.app = app;
@@ -42,14 +43,23 @@ export class Link {
     const dist = delta.length();
     const difference = dist - length;
 
-    if (
-      this.app.cursorSphere &&
-      (difference > this.tear * this.length ||
-        ((this.app.cursorSphere.containsPoint(p0.position) ||
-          this.app.cursorSphere.containsPoint(p1.position)) &&
-          this.app.worldBounds &&
-          this.app.pointer.isDown))
-    ) {
+    const strain = (difference - this.length) / this.length;
+    if (strain > this.strainTear && !p0.isPinned && !p1.isPinned) {
+      return true;
+    }
+
+    const isInsideCursor =
+      isXYInsideCircle(
+        p0.position,
+        this.app.cursorSphere.center,
+        this.app.cursorSphere.radius
+      ) ||
+      isXYInsideCircle(
+        p1.position,
+        this.app.cursorSphere.center,
+        this.app.cursorSphere.radius
+      );
+    if (isInsideCursor && this.app.pointer.isDown) {
       return true;
     }
 
