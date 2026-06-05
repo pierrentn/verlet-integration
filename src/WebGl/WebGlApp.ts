@@ -127,8 +127,8 @@ export class WebGlApp {
   private pLink: Link[] = [];
 
   public physicsParams: PhysicsParams = {
-    mass: 5,
-    elasticity: 0.001,
+    mass: 4,
+    elasticity: 0.009,
     force: FORCE,
     gravity: GRAVITY,
     friction: 0.002,
